@@ -414,6 +414,7 @@ function logError(ctx, err, extra){
 window.addEventListener('error', function(e){ logError('js', e.error || e.message, (e.filename||'').split('/').pop()+':'+e.lineno+':'+e.colno); });
 window.addEventListener('unhandledrejection', function(e){ logError('promesa', e.reason); });
 document.addEventListener('visibilitychange', function(){ logEvent('visibilidad', document.visibilityState); });
+setTimeout(function(){ try{ var nv=performance.getEntriesByType('navigation')[0]; logEvent('inicio', 'carga: '+(nv?nv.type:'?')+(document.wasDiscarded?' · la pestaña había sido descartada':'')); }catch(e){} }, 0);
 /* eventos informativos (no son errores, pero ayudan a entender qué pasó antes de uno) */
 function logEvent(ctx, info){ logError('· '+ctx, {name:'info', message:String(info)}); }
 function logText(){
@@ -1366,9 +1367,9 @@ function musStop(){ var a=musAudio(); a.pause(); a.removeAttribute('src'); a.loa
 function musPick(){ if(canFolder()) pickFolder(); else $('musFiles').click(); }
 var musNeedPerm=false, musMisses=0, musErrRun=0;
 function musAccessLost(why){
-  musNeedPerm=true; var a=musAudio(); a.pause(); musPaintPlay();
+  musNeedPerm = why==='access' ? 'repick' : true; var a=musAudio(); a.pause(); musPaintPlay();
   logEvent('carpeta', 'acceso perdido: '+why);
-  toast(why==='perm' ? '🔒 Toca ▶ y elige «Permitir» para seguir leyendo la carpeta' : '🔒 Se ha perdido el acceso a la carpeta. Toca ▶ para recuperarlo');
+  toast(why==='perm' ? '🔒 Toca ▶ y elige «Permitir» para seguir leyendo la carpeta' : '🔒 Se ha perdido el acceso a la carpeta. Toca ▶ y elígela otra vez (la lista se conserva)');
 }
 function musPlay(i, interactive){
   if(!mus.list.length){ musPick(); return; }
@@ -1378,11 +1379,11 @@ function musPlay(i, interactive){
   (song.path ? folderBlob(song.path, interactive) : musTx('readonly', function(st){ return st.get(want); })).then(function(rec){
     if(mus.list[mus.i]!==song) return;
     if(rec && (rec.err==='perm' || rec.err==='access')) return musAccessLost(rec.err);
-    if(rec && rec.err==='nodir'){ musNeedPerm=true; musPaintPlay(); return toast('Vuelve a elegir la carpeta de música en 🎵'); }
+    if(rec && rec.err==='nodir'){ musNeedPerm='repick'; musPaintPlay(); return toast('Vuelve a elegir la carpeta de música en 🎵'); }
     if(rec && rec.err==='missing'){
       // de verdad no está (se borró o se movió): se salta, pero sin quitarla; tras varias seguidas se para
       musMisses++;
-      if(musMisses>=3){ musMisses=0; musPaintPlay(); toast('No encuentro varias canciones: usa 🎵 → «Volver a leer la carpeta»'); return; }
+      if(musMisses>=3){ musMisses=0; musNeedPerm='repick'; musPaintPlay(); logEvent('carpeta','3 canciones seguidas sin encontrar'); toast('📁 No puedo leer la carpeta. Toca ▶ y elígela otra vez (la lista se conserva)'); return; }
       toast('No encuentro "'+song.name+'"; paso a la siguiente'); return setTimeout(function(){ musPlay(musOrder(1), interactive); }, 500);
     }
     if(!rec){ toast('No encuentro "'+song.name+'"; la quito de la lista'); logError('musica.copia', 'falta la copia', song.name); mus.list.splice(mus.i,1); musSave(); renderSongs(); return mus.list.length ? musPlay(mus.i, interactive) : musPaintTitle(); }
@@ -1462,6 +1463,7 @@ function removeSong(i){
   renderSongs(); musPaintTitle();
 }
 /* --- acceso a una carpeta (File System Access API: Chrome/Edge; no Brave/Firefox/Safari) --- */
+var musHandles={}, musRescanAt=0;
 var AUDIO_EXT=/\.(mp3|m4a|aac|ogg|oga|opus|flac|wav|weba|webm)$/i;
 function canFolder(){ return typeof window.showDirectoryPicker==='function'; }
 function getDir(){ return musDir ? Promise.resolve(musDir) : musTx('readonly', function(st){ return st.get('dir'); }, 'kv').then(function(h){ musDir=h||null; return musDir; }); }
@@ -1486,7 +1488,7 @@ function scanDir(dir, prefix, out, depth){
     return it.next().then(function(r){
       if(r.done) return;
       var e=r.value;
-      if(e.kind==='file' && AUDIO_EXT.test(e.name)) out.push(prefix+e.name);
+      if(e.kind==='file' && AUDIO_EXT.test(e.name)){ out.push(prefix+e.name); musHandles[prefix+e.name]=e; }
       else if(e.kind==='directory' && e.name[0]!=='.') subs.push(e);
       return step();
     });
@@ -1509,7 +1511,8 @@ function rescanFolder(ask, startPlaying){
         var keep=cur ? mus.list.findIndex(function(x){ return x.id===cur.id; }) : -1;
         mus.i = keep>=0 ? keep : 0; musSave(); renderSongs(); musPaintTitle();
         toast(songs.length ? '📁 '+songs.length+(songs.length>1?' canciones':' canción')+' en «'+h.name+'»' : 'No hay archivos de música en esa carpeta');
-        if(startPlaying && songs.length){ closeM('mMusic'); musPlay(0); }
+        musRescanAt=Date.now();
+        if(startPlaying && songs.length){ closeM('mMusic'); musNeedPerm=false; musMisses=0; musPlay(mus.i, true); }
       });
     });
   }).catch(function(e){ logError('carpeta.escanear', e); toast('No se ha podido leer la carpeta'); });
@@ -1517,26 +1520,63 @@ function rescanFolder(ask, startPlaying){
 /* Devuelve {blob} o {err:'perm'|'access'|'missing'|'nodir'}. En Android, al volver de otra app
    el navegador puede retirar el permiso o invalidar el acceso aunque la carpeta siga ahí: eso
    NO significa que falten las canciones, así que nunca se quitan de la lista por ello. */
-function folderBlob(path, interactive, retried){
+/* Varios métodos, porque en Android (Chrome) al volver de otra app buscar por nombre puede
+   devolver NotFoundError aunque el archivo exista:
+   1) el acceso guardado al escanear  2) buscar por nombre  3) recorrer las carpetas
+   4) volver a escanear toda la carpeta (como mucho una vez por minuto). */
+function byName(root, path){
+  var parts=path.split('/'), file=parts.pop();
+  return parts.reduce(function(pr,name){ return pr.then(function(d){ return d.getDirectoryHandle(name); }); }, Promise.resolve(root))
+    .then(function(d){ return d.getFileHandle(file); });
+}
+function byWalk(root, path){
+  var parts=path.split('/');
+  function find(dir, idx){
+    var it=dir.values(), want=parts[idx], last=idx===parts.length-1;
+    function step(){ return it.next().then(function(r){
+      if(r.done) throw new DOMException('no está: '+want, 'NotFoundError');
+      var e=r.value;
+      if(e.name===want && (last ? e.kind==='file' : e.kind==='directory')) return last ? e : find(e, idx+1);
+      return step();
+    }); }
+    return step();
+  }
+  return find(root, 0);
+}
+function rootAlive(root){ return root.values().next().then(function(){ return true; }, function(e){ logError('carpeta.raiz', e); return false; }); }
+function folderBlob(path, interactive){
   return getDir().then(function(h){
     if(!h) return {err:'nodir'};
     return ensurePerm(h, !!interactive).catch(function(e){ logError('carpeta.permiso', e); return false; }).then(function(ok){
       if(!ok){ logEvent('carpeta', 'sin permiso (interactivo='+!!interactive+')'); return {err:'perm'}; }
-      var parts=path.split('/'), file=parts.pop();
-      return parts.reduce(function(pr,name){ return pr.then(function(d){ return d.getDirectoryHandle(name); }); }, Promise.resolve(h))
-        .then(function(d){ return d.getFileHandle(file); }).then(function(fh){ return fh.getFile(); })
-        .then(function(f){ return {blob:f}; })
-        .catch(function(e){
-          logError('carpeta.leer', e, path);
-          if(!retried){ musDir=null; return folderBlob(path, interactive, true); }   // reintenta con el acceso recién leído de IndexedDB
-          return {err: e && e.name==='NotFoundError' ? 'missing' : 'access'};
-        });
+      var methods=[
+        ['guardado', function(){ return musHandles[path] ? Promise.resolve(musHandles[path]) : Promise.reject(new DOMException('sin acceso guardado','NotFoundError')); }],
+        ['nombre', function(){ return byName(h, path); }],
+        ['recorrido', function(){ return byWalk(h, path); }],
+        ['reescaneo', function(){
+          if(Date.now()-musRescanAt<60000) return Promise.reject(new DOMException('reescaneo reciente','NotFoundError'));
+          musRescanAt=Date.now(); musHandles={};
+          return scanDir(h, '', [], 0).then(function(){ return musHandles[path] || Promise.reject(new DOMException('no aparece al reescanear','NotFoundError')); });
+        }]
+      ], fails=[];
+      function attempt(k){
+        if(k>=methods.length){
+          logError('carpeta.leer', {name:fails[fails.length-1] && fails[fails.length-1].name || 'Error', message:fails.map(function(f){ return f.m+': '+f.name; }).join(', ')}, path);
+          return rootAlive(h).then(function(alive){ return {err: alive && fails.every(function(f){ return f.name==='NotFoundError'; }) ? 'missing' : 'access'}; });
+        }
+        return methods[k][1]().then(function(fh){ return fh.getFile().then(function(f){ musHandles[path]=fh; return f; }); }).then(function(f){
+          if(k>0) logEvent('carpeta', 'leída con el método «'+methods[k][0]+'» tras fallar: '+fails.map(function(x){ return x.m+' ('+x.name+')'; }).join(', '));
+          return {blob:f};
+        }, function(e){ fails.push({m:methods[k][0], name:e && e.name || 'Error'}); return attempt(k+1); });
+      }
+      return attempt(0);
     });
   });
 }
 /* Con un toque del usuario (requisito del navegador) se vuelve a pedir el permiso; si ni así,
    se ofrece volver a elegir la carpeta (y la lista se conserva si las rutas coinciden). */
 function musRecover(){
+  if(musNeedPerm==='repick' && canFolder()){ musNeedPerm=false; pickFolder(); return; }
   getDir().then(function(h){
     if(!h){ openMusic(); return; }
     return ensurePerm(h, true).then(function(ok){
