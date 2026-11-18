@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6f6fd0"/><stop offset=".45" stop-color="#b79ad8"/>
+      <stop offset=".75" stop-color="#f3a9b2"/><stop offset="1" stop-color="#ffcc94"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff8dc"/><stop offset=".45" stop-color="#ffe2a0" stop-opacity=".85"/><stop offset="1" stop-color="#ffd090" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7a70c4"/><stop offset=".4" stop-color="#4c4490"/><stop offset="1" stop-color="#302a56"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe17a"/><stop offset=".5" stop-color="#ffb627"/><stop offset="1" stop-color="#d98a12"/>
+    </linearGradient>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#1c1036" flood-opacity=".45"/>
+    </filter>
+    <symbol id="t" viewBox="0 0 100 100">
+      <rect x="0" y="8" width="100" height="92" rx="22" fill="#1f1a3d"/>
+      <rect x="0" y="0" width="100" height="92" rx="22" fill="url(#tile)"/>
+      <rect x="3" y="3" width="94" height="86" rx="19" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="2.5"/>
+      <path d="M14 10 h72 a12 12 0 0 1 12 12 v10 q-48 -10 -96 0 v-10 a12 12 0 0 1 12 -12z" fill="url(#gloss)"/>
+    </symbol>
+    <symbol id="tg" viewBox="0 0 100 100">
+      <rect x="0" y="8" width="100" height="92" rx="22" fill="#9a5c08"/>
+      <rect x="0" y="0" width="100" height="92" rx="22" fill="url(#gold)"/>
+      <rect x="3" y="3" width="94" height="86" rx="19" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="2.5"/>
+      <path d="M14 10 h72 a12 12 0 0 1 12 12 v10 q-48 -10 -96 0 v-10 a12 12 0 0 1 12 -12z" fill="url(#gloss)"/>
+    </symbol>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <circle cx="330" cy="300" r="190" fill="url(#sun)"/>
+  <g fill="#fff" opacity=".35"><ellipse cx="110" cy="96" rx="70" ry="15"/><ellipse cx="150" cy="84" rx="40" ry="13"/><ellipse cx="420" cy="140" rx="60" ry="12"/></g>
+  <!-- castillo y colinas -->
+  <path d="M0 430 Q130 380 260 405 T512 395 V512 H0Z" fill="#a785ad" opacity=".85"/>
+  <path d="M60 440 V380 h-8 v-14 h11 v8 h8 v-8 h10 v8 h8 v-8 h11 v14 h-8 v30 h40 V350 h-8 v-14 h11 v8 h8 v-8 h10 v8 h8 v-8 h11 v14 h-8 v90Z" fill="#6a4566" opacity=".9"/>
+  <path d="M0 465 Q140 430 280 452 T512 445 V512 H0Z" fill="#5d3f5c"/>
+  <!-- fichas en cruz: SOL / LUZ -->
+  <g filter="url(#sh)" font-family="Montserrat,'Avenir Next','Segoe UI',Arial,sans-serif" font-weight="900" font-size="70" text-anchor="middle">
+    <use href="#t" x="86"  y="122" width="104" height="104"/>
+    <use href="#t" x="198" y="122" width="104" height="104"/>
+    <use href="#tg" x="310" y="122" width="104" height="104"/>
+    <use href="#t" x="310" y="234" width="104" height="104"/>
+    <use href="#t" x="310" y="346" width="104" height="104"/>
+    <g fill="#fff" stroke="#1f1a3d" stroke-opacity=".35" stroke-width="2">
+      <text x="138" y="196">S</text><text x="250" y="196">O</text>
+      <text x="362" y="308">U</text><text x="362" y="420">Z</text>
+    </g>
+    <text x="362" y="196" fill="#4a2a00" fill-opacity=".85">L</text>
+  </g>
+  <!-- destellos -->
+  <g fill="#fff">
+    <path d="M110 300 l6 18 18 6 -18 6 -6 18 -6 -18 -18 -6 18 -6z" opacity=".9"/>
+    <path d="M440 88 l4 12 12 4 -12 4 -4 12 -4 -12 -12 -4 12 -4z" opacity=".85"/>
+    <path d="M200 280 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" opacity=".7"/>
+  </g>
+</svg>
