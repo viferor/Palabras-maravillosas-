@@ -110,6 +110,11 @@
   .clue-def small{display:block;font-size:.72rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#8a80b8;margin-bottom:4px}
   .clue-def .more{display:inline-block;margin-top:8px;font-weight:800;font-size:.85rem;color:#5b46d6;cursor:pointer}
   .btn .price{float:right;opacity:.9}
+  .def .row{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .def .row button{border:0;border-radius:10px;padding:7px 12px;font-weight:800;font-size:.9rem;background:#3a3462;color:#fff;cursor:pointer}
+  .defitem{background:#f1eefb;border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:.98rem;line-height:1.42;color:#2b2448}
+  .defitem small{display:block;font-size:.7rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#8a80b8;margin-bottom:3px}
+  .rae{display:block;text-align:center;margin-top:10px;color:#5b46d6;font-weight:700;font-size:.85rem;text-decoration:none}
 
   /* TOASTS / BANNERS */
   .banner{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 66px);transform:translateX(-50%);z-index:40;background:#ffc23d;color:#2b2140;font-weight:800;padding:8px 14px;border-radius:14px;display:none;align-items:center;gap:10px;box-shadow:0 4px 14px rgba(0,0,0,.3);white-space:nowrap}
@@ -218,7 +223,7 @@
 
 <div class="banner" id="hammerBanner">Toca la casilla que quieres revelar <button onclick="toggleHammer(false)">Cancelar</button></div>
 <div class="banner" id="clueBanner"><span>Toca una casilla de la palabra<small id="clueLeft"></small></span><button onclick="toggleClue(false)">Cancelar</button></div>
-<div class="def" id="def"><b id="defWord"></b><p><a id="defLink" href="#" target="_blank" rel="noopener">Ver definición en el diccionario de la RAE ↗</a></p></div>
+<div class="def" id="def"><b id="defWord"></b><div class="row"><button onclick="openDefModal()">📖 Ver definición</button></div></div>
 <div class="toast" id="toast"></div>
 <div class="gen" id="gen"><span class="pill" style="padding:0 18px">Generando tablero…</span></div>
 
@@ -301,6 +306,12 @@
     <button class="btn gold" id="btnClueLetters" onclick="buyClueLetters()"></button>
     <button class="btn ghost" id="btnClueSwap" onclick="swapClueWord()">Usar la otra palabra de esta casilla</button>
   </div>
+</div></div>
+
+<!-- MODAL DEFINICIÓN DENTRO DEL JUEGO -->
+<div class="modal" id="mDef"><div class="card">
+  <header><h2 id="mDefWord"></h2><button onclick="closeM('mDef')">✕</button></header>
+  <div class="body"><div id="mDefBody"></div><a class="rae" id="mDefRae" href="#" target="_blank" rel="noopener">Abrir en el diccionario de la RAE ↗</a></div>
 </div></div>
 
 <!-- MODAL INFO / FIN NIVEL -->
@@ -929,8 +940,8 @@ function maskText(t, roots){
     return roots.some(function(r){ return n.length>=3 && (n.indexOf(r)===0 || r.indexOf(n)===0 && n.length>=4); }) ? '…' : tok;
   });
 }
-function fetchClueDefs(w){
-  var vars=accentVariants(w);
+function fetchClueDefs(w, raw){
+  var vars=accentVariants(w), maskText = raw ? function(t){ return t; } : window.maskText;
   return wikiJSON('action=query&titles='+encodeURIComponent(vars.join('|'))).then(function(d){
     var pages=((d.query&&d.query.pages)||[]).filter(function(p){ return !p.missing && !p.invalid; }).map(function(p){ return p.title; });
     // primero la forma sin tilde y luego las demás, en el orden de las variantes
@@ -947,6 +958,7 @@ function fetchClueDefs(w){
       return wikiParse(lemma).then(function(ld){
         ld=ld.filter(function(x){ return !FORM_RE.test(x.text); });
         if(!ld.length) return [{cat:'Forma flexiva', text:desc}];
+        if(raw) return [{cat:'Forma flexiva', text:desc}].concat(ld.slice(0,6).map(function(x){ return {cat:lemma+' · '+x.cat.toLowerCase(), text:x.text}; }));
         return ld.slice(0,6).map(function(x){ return {cat:'Forma flexiva', text:desc+' La palabra base significa: '+maskText(x.text,[w,lemma])}; });
       });
     });
@@ -1004,9 +1016,29 @@ function levelDone(){
 function backToGame(){ S.mode='normal'; if(S.board && !S.board.complete) showBoard(); else newBoard(S.len); }
 
 /* ================= DEFINICIÓN (RAE) ================= */
+var defCache={};
+function openDefModal(){
+  var w=showDef._w; if(!w) return;
+  $('def').classList.remove('on');
+  $('mDefWord').textContent=w;
+  $('mDefRae').href='https://dle.rae.es/'+encodeURIComponent(w.toLowerCase());
+  var body=$('mDefBody');
+  function paint(defs){
+    if(showDef._w!==w) return;
+    body.innerHTML = defs.length ? defs.map(function(d){ return '<div class="defitem"><small>'+escapeHtml(d.cat)+'</small>'+escapeHtml(d.text)+'</div>'; }).join('')
+                                 : '<p class="muted">No he encontrado la definición de esta palabra.</p>';
+  }
+  if(defCache[w]) paint(defCache[w]);
+  else {
+    body.innerHTML='<p class="muted center">Buscando definición…</p>';
+    fetchClueDefs(w, true).then(function(defs){ if(defs.length) defCache[w]=defs; paint(defs); })
+      .catch(function(){ if(showDef._w===w) body.innerHTML='<p class="muted">Sin conexión: la definición necesita internet.</p>'; });
+  }
+  openM('mDef');
+}
 function showDef(w){
+  showDef._w=w;
   $('defWord').textContent=w;
-  $('defLink').href='https://dle.rae.es/'+encodeURIComponent(w.toLowerCase());
   var el=$('def'); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
   clearTimeout(showDef._t); showDef._t=setTimeout(function(){el.classList.remove('on');},3500);
 }
