@@ -117,6 +117,14 @@
   .clue-def small{display:block;font-size:.72rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#8a80b8;margin-bottom:4px}
   .clue-def .more{display:inline-block;margin-top:8px;font-weight:800;font-size:.85rem;color:#5b46d6;cursor:pointer}
   .btn .price{float:right;opacity:.9}
+  /* SONIDO */
+  .snd-row{display:flex;align-items:center;gap:10px;margin:12px 0 2px;font-weight:800;font-size:.95rem}
+  .snd-row span{flex:1}
+  .snd-row input[type=range]{flex:1.4;accent-color:#7b5cff}
+  .switch{position:relative;width:50px;height:28px;border-radius:14px;background:#cfc9e6;border:0;cursor:pointer;transition:background .2s;flex-shrink:0}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.25);transition:left .2s}
+  .switch.on{background:#2fae58}.switch.on::after{left:25px}
+  .music button.snd.off{opacity:.55}
   /* MINI REPRODUCTOR */
   .music{flex-shrink:0;display:flex;align-items:center;gap:6px;width:100%;max-width:440px;margin:6px auto 0;height:48px;padding:0 6px;border-radius:26px;
          background:linear-gradient(180deg,rgba(60,52,110,.82),rgba(36,30,72,.88));border:1.5px solid rgba(255,255,255,.3);
@@ -249,6 +257,7 @@
   <!-- MINI REPRODUCTOR DE MÚSICA -->
   <div class="music" id="music">
     <button onclick="openMusic()" title="Mis canciones"><svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M9 18V6l11-2v12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3"/><circle cx="17.5" cy="16" r="3"/></svg></button>
+    <button class="snd" id="sndBtn" onclick="setSnd('sfx', !S.sfx)" title="Efectos de sonido"><svg id="sndIco" width="20" height="20" viewBox="0 0 24 24"></svg></button>
     <div class="title" id="musTitle"><span>Toca ▶ para elegir tus canciones</span></div>
     <button onclick="musPrev()" title="Anterior"><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M6 5h2.5v14H6zM20 5v14L9.5 12z"/></svg></button>
     <button class="main" id="musPlayBtn" onclick="musToggle()" title="Reproducir / pausa"><svg id="musPlayIco" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15L20 12z"/></svg></button>
@@ -268,12 +277,19 @@
 <div class="modal" id="mMenu"><div class="card">
   <header><h2>Menú</h2><button onclick="closeM('mMenu')">✕</button></header>
   <div class="body">
-    <div class="tabs"><button data-t="tGame" class="on">Partida</button><button data-t="tStats">Progreso</button><button data-t="tHow">Cómo jugar</button></div>
+    <div class="tabs"><button data-t="tGame" class="on">Partida</button><button data-t="tStats">Progreso</button><button data-t="tSnd">Sonido</button><button data-t="tHow">Cómo jugar</button></div>
     <div id="tGame">
       <p class="muted" id="gameInfo"></p>
       <p style="font-weight:800;margin:12px 0 4px">Nuevo tablero con…</p>
       <div class="lens" id="lensMenu"></div>
       <button class="btn green" onclick="closeM('mMenu');newBoard(S.len)">Nuevo tablero</button>
+    </div>
+    <div id="tSnd" style="display:none">
+      <div class="snd-row"><span>🔔 Efectos del juego</span><button class="switch" id="swSfx" onclick="setSnd('sfx', !S.sfx)"></button></div>
+      <div class="snd-row"><span>Volumen efectos</span><input type="range" id="rgSfx" min="0" max="100" oninput="setSnd('sfxVol', this.value/100)"></div>
+      <div class="snd-row"><span>🎵 Volumen música</span><input type="range" id="rgMus" min="0" max="100" oninput="setSnd('musVol', this.value/100)"></div>
+      <div class="snd-row"><span>Bajar la música cuando suena un efecto</span><button class="switch" id="swDuck" onclick="setSnd('duck', !S.duck)"></button></div>
+      <p class="muted" style="margin-top:12px">El botón 🔔 de la barra de música silencia o activa los efectos al momento. La música tiene su propio ⏯.</p>
     </div>
     <div id="tStats" style="display:none">
       <div class="stats" id="statsBox"></div>
@@ -292,6 +308,7 @@
         <li><b>Pista</b> (lupa): toca una casilla y elige para esa palabra una definición disimulada (30 💎) o que se muestren algunas letras sueltas (60 💎).</li>
         <li><b>Ayudas gratis de la lupa:</b> al pulsarla ves cuántas palabras faltan de cada longitud; cada 30 minutos se recarga una pista de letras sueltas gratis (el anillo verde marca lo que falta) y, si llevas 3 minutos sin acertar ninguna palabra, te regala una letra de cortesía.</li>
         <li><b>Música:</b> en la barra de abajo eliges tu música (botón 🎵 o ▶) y la escuchas mientras juegas con ⏮ ⏯ ⏭. En navegadores que lo permiten (Chrome, Edge) puedes dar acceso a una carpeta y se lee directamente, sin copiar; en los demás (Brave, Firefox, Safari) las canciones elegidas se guardan como copia en el navegador.</li>
+        <li><b>Sonido:</b> el botón 🔔 de la barra de abajo silencia o activa los efectos. En Menú → Sonido ajustas el volumen de efectos y música por separado.</li>
         <li><b>Martillo:</b> eliges tú la casilla que quieres revelar. Usa uno de tus martillos o, si no te quedan, 80 💎.</li>
         <li><b>Tableros:</b> eliges de 5 a 12 letras cuando quieras y cada tablero se genera nuevo, así que nunca se repite.</li>
         <li><b>Reto diario:</b> se desbloquea al superar 3 tableros. Cada día un tablero nuevo que da soles ☀️ acumulables; el cofre de 10 soles te da 100 💎.</li>
@@ -504,7 +521,7 @@ function generateBoard(n, rnd, lim){
 /* ================= ESTADO ================= */
 function defaults(){
   return { gems:150, hammers:3, suns:0, sunsChest:0, extraJar:0, len:7, boardsDone:0, doneByLen:{},
-           wordsFound:0, extrasFound:0, freeClueAt:0, board:null, mode:'normal', daily:{ date:'', board:null, done:false } };
+           wordsFound:0, extrasFound:0, freeClueAt:0, sfx:true, sfxVol:0.7, musVol:0.85, duck:true, board:null, mode:'normal', daily:{ date:'', board:null, done:false } };
 }
 var S = defaults();
 var level = null, letters = [], sel = [], dragging = false, hammerMode = false, clueMode = false, clueWord = null, clueAlt = null, busy = false, pointer = null, extrasValid = [];
@@ -518,8 +535,8 @@ function isDaily(){ return S.mode==='daily'; }
 function prog(){ return level; }
 function toast(msg){ var t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(function(){t.classList.remove('on');},2000); }
 function flyText(txt,x,y,color){ var el=document.createElement('div'); el.className='fly'; el.textContent=txt; el.style.left=x+'px'; el.style.top=y+'px'; el.style.color=color||'#fff'; document.body.appendChild(el); setTimeout(function(){el.remove();},1000); }
-function addGems(n, srcEl){ S.gems+=n; var r=(srcEl||$('pillGems')).getBoundingClientRect(); flyText('+'+n+' 💎', r.left+r.width/2-20, r.top, '#7dffa0'); }
-function openM(id){ $(id).classList.add('on'); }
+function addGems(n, srcEl){ S.gems+=n; setTimeout(function(){ sfx('coin'); }, 250); var r=(srcEl||$('pillGems')).getBoundingClientRect(); flyText('+'+n+' 💎', r.left+r.width/2-20, r.top, '#7dffa0'); }
+function openM(id){ if(!$(id).classList.contains('on')) sfx('click'); $(id).classList.add('on'); }
 function closeM(id){ $(id).classList.remove('on'); }
 function info(title, html){ $('infoTitle').textContent=title; $('infoBody').innerHTML=html; openM('mInfo'); }
 
@@ -715,6 +732,7 @@ function sizeLetters(){
 }
 function shuffleLetters(){
   if(dragging) return;
+  sfx('shuffle');
   var old=letters.join('');
   for(var t=0;t<5;t++){ shuffleArray(letters); if(letters.join('')!==old) break; }
   var nodes=$('wheel').querySelectorAll('.letter'), used={};
@@ -757,7 +775,7 @@ wheelEl.addEventListener('pointerdown', function(e){
   e.preventDefault();
   if(hammerMode) toggleHammer(false);
   if(clueMode) toggleClue(false);
-  dragging=true; sel=[i]; pointer={x:e.clientX,y:e.clientY};
+  dragging=true; sel=[i]; pointer={x:e.clientX,y:e.clientY}; sfx('letter',1);
   try{ wheelEl.setPointerCapture(e.pointerId); }catch(_){}
   $('def').classList.remove('on');
   refreshSel();
@@ -767,7 +785,7 @@ wheelEl.addEventListener('pointermove', function(e){
   e.preventDefault();
   pointer={x:e.clientX,y:e.clientY};
   var i=nodeAt(e.clientX,e.clientY);
-  if(i!==-1){ if(sel.indexOf(i)===-1) sel.push(i); else if(sel.length>1 && sel[sel.length-2]===i) sel.pop(); }
+  if(i!==-1){ if(sel.indexOf(i)===-1){ sel.push(i); sfx('letter',sel.length); } else if(sel.length>1 && sel[sel.length-2]===i){ sel.pop(); sfx('letter',sel.length); } }
   refreshSel();
 });
 function endDrag(){
@@ -776,7 +794,7 @@ function endDrag(){
   var w=currentWord(); sel=[];
   Array.prototype.forEach.call($('wheel').querySelectorAll('.letter'), function(el){ el.classList.remove('sel'); });
   drawLines();
-  if(w.length>=3) submit(w); else if(w.length===2) setPreview(w,'bad'); else $('preview').className='';
+  if(w.length>=3) submit(w); else if(w.length===2){ setPreview(w,'bad'); sfx('bad'); } else $('preview').className='';
 }
 wheelEl.addEventListener('pointerup', endDrag);
 wheelEl.addEventListener('pointercancel', endDrag);
@@ -787,23 +805,23 @@ function setPreview(w,cls){ var pv=$('preview'); pv.textContent=w; pv.className=
 function submit(w){
   var target=level.placements.filter(function(p){return p.word===w;})[0];
   if(target){
-    if(level.found.indexOf(w)!==-1){ setPreview(w,'dup'); flashWord(w); toast('Ya la tienes'); return; }
+    if(level.found.indexOf(w)!==-1){ setPreview(w,'dup'); sfx('dup'); flashWord(w); toast('Ya la tienes'); return; }
     level.found.push(w); S.wordsFound++; level.idle=0;
-    setPreview(w,'ok');
+    setPreview(w,'ok'); sfx('word');
     if(isDaily()){ S.suns++; S.sunsChest=Math.min(CHEST_SUNS,S.sunsChest+1); var r=$('pillSun').getBoundingClientRect(); flyText('+1 ☀️', r.left+20, r.top+40, '#ffd34d'); }
     renderGrid([w]); showDef(w); afterReveal(); save();
     return;
   }
   if(extrasValid.indexOf(w)!==-1){
-    if(level.extras.indexOf(w)!==-1){ setPreview(w,'dup'); toast('Palabra extra ya encontrada'); return; }
+    if(level.extras.indexOf(w)!==-1){ setPreview(w,'dup'); sfx('dup'); toast('Palabra extra ya encontrada'); return; }
     level.extras.push(w); S.extrasFound++; S.extraJar++;
-    setPreview(w,'extra');
+    setPreview(w,'extra'); sfx('extra');
     var bx=$('btnExtras').getBoundingClientRect(); flyText('+1', bx.left+24, bx.top, '#ffd34d');
     if(S.extraJar>=EXTRA_JAR){ S.extraJar=0; addGems(EXTRA_JAR_REWARD,$('btnExtras')); toast('¡Caja de extras llena! +'+EXTRA_JAR_REWARD+' 💎'); }
     else toast('Palabra extra ('+S.extraJar+'/'+EXTRA_JAR+')');
     save(); return;
   }
-  setPreview(w,'bad');
+  setPreview(w,'bad'); sfx('bad');
 }
 function afterReveal(){
   var M=matrix(), newly=[];
@@ -824,7 +842,7 @@ function useBulb(){
   if(!hid.length) return toast('No quedan letras ocultas');
   if(S.gems<BULB_COST) return toast('Necesitas '+BULB_COST+' 💎');
   S.gems-=BULB_COST;
-  var k=pick(hid); level.revealed.push(k);
+  var k=pick(hid); level.revealed.push(k); sfx('reveal');
   var newly=afterReveal(); renderGrid(newly,k); save();
 }
 function toggleHammer(force){
@@ -836,7 +854,7 @@ function toggleHammer(force){
     else if(S.hammers<=0 && S.gems<HAMMER_COST){ toast('Necesitas un martillo o '+HAMMER_COST+' 💎'); on=false; }
   }
   if(on===hammerMode) return;
-  hammerMode=on;
+  hammerMode=on; if(on) sfx('click');
   $('hammerBanner').classList.toggle('on',on);
   $('hammerBanner').firstChild.textContent = (on && S.hammers<=0) ? 'Toca una casilla ('+HAMMER_COST+' 💎) ' : 'Toca la casilla que quieres revelar ';
   if(level) renderGrid();
@@ -845,7 +863,7 @@ function toggleHammer(force){
 function applyHammer(k){
   if(!hammerMode) return;
   if(S.hammers>0) S.hammers--; else if(S.gems>=HAMMER_COST) S.gems-=HAMMER_COST; else { toggleHammer(false); return toast('Sin martillos ni gemas'); }
-  level.revealed.push(k);
+  level.revealed.push(k); sfx('reveal');
   hammerMode=false; $('hammerBanner').classList.remove('on');
   var newly=afterReveal(); renderGrid(newly,k); save();
 }
@@ -859,7 +877,7 @@ function toggleClue(force){
     if(hammerMode) toggleHammer(false);
   }
   if(on===clueMode) return;
-  clueMode=on;
+  clueMode=on; if(on) sfx('click');
   $('clueBanner').classList.toggle('on',on);
   if(on) $('clueLeft').textContent=remainingByLength();
   if(level) renderGrid();
@@ -913,7 +931,7 @@ function buyClueLetters(mode){
   else if(free) S.freeClueAt=Date.now()+FREE_CLUE_MS;
   else S.gems-=CLUE_LETTERS_COST;
   var keys=chosen.map(function(h){ return h.k; });
-  keys.forEach(function(k){ level.revealed.push(k); });
+  keys.forEach(function(k){ level.revealed.push(k); }); sfx('reveal');
   closeM('mClue'); clueWord=null; clueAlt=null;
   var newly=afterReveal(); renderGrid(newly, keys); save();
 }
@@ -1042,6 +1060,7 @@ function escapeHtml(t){ return String(t).replace(/[&<>"]/g,function(c){ return {
 
 /* ================= FIN DE TABLERO ================= */
 function levelDone(){
+  setTimeout(function(){ sfx('win'); }, 700);
   busy=true; level.complete=true;
   var html, title;
   if(isDaily()){
@@ -1144,8 +1163,8 @@ function openMenu(){
     (by?'<p class="muted" style="grid-column:1/-1">'+by.replace(/ · $/,'')+'</p>':'');
   openM('mMenu');
 }
-Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function(b){
-  b.onclick=function(){ Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function(x){ x.classList.toggle('on',x===b); $(x.dataset.t).style.display=x===b?'':'none'; }); };
+Array.prototype.forEach.call(document.querySelectorAll('.tabs button[data-t]'), function(b){
+  b.onclick=function(){ Array.prototype.forEach.call(document.querySelectorAll('.tabs button[data-t]'), function(x){ x.classList.toggle('on',x===b); $(x.dataset.t).style.display=x===b?'':'none'; }); };
 });
 Array.prototype.forEach.call(document.querySelectorAll('.modal'), function(m){ m.addEventListener('click', function(e){ if(e.target===m && !(m.id==='mNew' && !S.board)) m.classList.remove('on'); }); });
 
@@ -1168,6 +1187,69 @@ window.addEventListener('resize', function(){ if(level){ renderGrid(); sizeLette
 
 /* sin menú del navegador al mantener pulsado (pulsación larga), ni selección ni arrastre de elementos */
 ['contextmenu','selectstart','dragstart'].forEach(function(ev){ document.addEventListener(ev, function(e){ e.preventDefault(); }, {passive:false}); });
+
+/* ================= EFECTOS DE SONIDO ================= */
+/* Todo sintetizado con Web Audio: no hay archivos que descargar. El contexto se crea con
+   el primer toque (los navegadores no dejan sonar antes de que el usuario toque algo). */
+var sfxCtx=null, sfxOut=null, duckT=null;
+function sfxReady(){
+  if(!S.sfx || S.sfxVol<=0) return null;
+  try{
+    if(!sfxCtx){ var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null; sfxCtx=new AC(); sfxOut=sfxCtx.createGain(); sfxOut.connect(sfxCtx.destination); }
+    if(sfxCtx.state==='suspended') sfxCtx.resume();
+    sfxOut.gain.value=S.sfxVol*0.6;
+    return sfxCtx;
+  }catch(e){ return null; }
+}
+function tone(f, t0, dur, o){
+  o=o||{}; var c=sfxCtx, osc=c.createOscillator(), g=c.createGain(), t=c.currentTime+t0, v=o.vol||0.5;
+  osc.type=o.type||'sine'; osc.frequency.setValueAtTime(f,t);
+  if(o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t+dur);
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(v, t+Math.min(0.012,dur/4));
+  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  osc.connect(g); g.connect(sfxOut); osc.start(t); osc.stop(t+dur+0.02);
+}
+function noise(t0, dur, o){
+  o=o||{}; var c=sfxCtx, n=Math.floor(c.sampleRate*dur), buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
+  for(var i=0;i<n;i++) d[i]=Math.random()*2-1;
+  var src=c.createBufferSource(), f=c.createBiquadFilter(), g=c.createGain(), t=c.currentTime+t0;
+  src.buffer=buf; f.type='bandpass'; f.frequency.setValueAtTime(o.from||600,t); f.frequency.exponentialRampToValueAtTime(o.to||3000,t+dur); f.Q.value=1.2;
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(o.vol||0.3,t+dur*0.3); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  src.connect(f); f.connect(g); g.connect(sfxOut); src.start(t);
+}
+/* baja un momento la música para que el efecto se oiga (y luego la devuelve) */
+function duck(ms){
+  var a=$('musAudio'); if(!a || a.paused || !S.duck) return;
+  a.volume=S.musVol*0.45; clearTimeout(duckT); duckT=setTimeout(function(){ a.volume=S.musVol; }, ms||450);
+}
+var NOTES=[523.25,587.33,659.25,698.46,783.99,880,987.77,1046.5,1174.66,1318.5,1396.9,1568];
+var SFX={
+  letter:function(n){ if(!sfxReady()) return; tone(NOTES[Math.min(n-1,NOTES.length-1)],0,0.12,{type:'triangle',vol:0.35}); },
+  word:function(){ if(!sfxReady()) return; duck(700); [659.25,830.6,987.77,1318.5].forEach(function(f,i){ tone(f,i*0.07,0.32,{type:'triangle',vol:0.4}); }); tone(2637,0.28,0.25,{vol:0.12}); },
+  extra:function(){ if(!sfxReady()) return; duck(500); tone(1046.5,0,0.14,{type:'sine',vol:0.35}); tone(1568,0.08,0.22,{type:'sine',vol:0.3}); tone(2093,0.16,0.2,{vol:0.12}); },
+  bad:function(){ if(!sfxReady()) return; tone(220,0,0.16,{type:'square',vol:0.12,to:170}); tone(165,0.12,0.2,{type:'square',vol:0.1,to:130}); },
+  dup:function(){ if(!sfxReady()) return; tone(440,0,0.1,{type:'sine',vol:0.25}); tone(440,0.13,0.1,{type:'sine',vol:0.2}); },
+  shuffle:function(){ if(!sfxReady()) return; noise(0,0.28,{from:400,to:4000,vol:0.22}); },
+  reveal:function(){ if(!sfxReady()) return; duck(600); tone(784,0,0.5,{type:'sine',vol:0.25,to:1568}); [1568,2093,2637].forEach(function(f,i){ tone(f,0.1+i*0.06,0.18,{vol:0.12}); }); },
+  coin:function(){ if(!sfxReady()) return; duck(500); tone(987.77,0,0.08,{type:'square',vol:0.12}); tone(1318.5,0.07,0.3,{type:'square',vol:0.12}); },
+  click:function(){ if(!sfxReady()) return; tone(900,0,0.05,{type:'triangle',vol:0.2,to:600}); },
+  win:function(){ if(!sfxReady()) return; duck(1800);
+    [[523.25,0],[659.25,0.12],[783.99,0.24],[1046.5,0.36],[783.99,0.52],[1046.5,0.64]].forEach(function(n){ tone(n[0],n[1],0.3,{type:'triangle',vol:0.38}); });
+    [1046.5,1318.5,1568].forEach(function(f){ tone(f,0.8,0.9,{type:'sine',vol:0.18}); }); }
+};
+function sfx(name, arg){ try{ SFX[name] && SFX[name](arg); }catch(e){} }
+function setSnd(key, val){
+  S[key]=val; save(); paintSnd();
+  if(key==='musVol'){ var a=$('musAudio'); if(a) a.volume=S.musVol; }
+  if(key==='sfx' && val) sfx('click');
+  if(key==='sfxVol'){ clearTimeout(setSnd._t); setSnd._t=setTimeout(function(){ sfx('extra'); }, 150); }
+}
+function paintSnd(){
+  $('swSfx').classList.toggle('on', !!S.sfx); $('swDuck').classList.toggle('on', !!S.duck);
+  $('rgSfx').value=Math.round(S.sfxVol*100); $('rgMus').value=Math.round(S.musVol*100);
+  $('sndBtn').classList.toggle('off', !S.sfx);
+  $('sndIco').innerHTML = '<path d="M12 3a6 6 0 0 0-6 6v4l-2 3h16l-2-3V9a6 6 0 0 0-6-6zM10 19a2 2 0 0 0 4 0" fill="#fff"/>'+(S.sfx?'':'<path d="M3 3l18 18" stroke="#ff6b6b" stroke-width="2.6" stroke-linecap="round"/>');
+}
 
 /* ================= MINI REPRODUCTOR DE MÚSICA ================= */
 /* Las canciones elegidas se guardan (el archivo entero) en IndexedDB de este navegador,
@@ -1229,7 +1311,7 @@ function musPlay(i){
     if(!rec){ toast('No encuentro "'+song.name+'"; la quito de la lista'); mus.list.splice(mus.i,1); musSave(); renderSongs(); return mus.list.length ? musPlay(mus.i) : musPaintTitle(); }
     var a=musAudio();
     if(musUrl) URL.revokeObjectURL(musUrl);
-    musUrl=URL.createObjectURL(rec.blob); a.src=musUrl;
+    musUrl=URL.createObjectURL(rec.blob); a.src=musUrl; a.volume=S.musVol;
     var pr=a.play(); if(pr && pr.catch) pr.catch(function(){ musPaintPlay(); });
     musPaintTitle(); renderSongs(); musMediaSession();
   }).catch(function(){ toast('No se ha podido abrir la canción'); });
@@ -1386,12 +1468,14 @@ function musMediaSession(){
   a.addEventListener('ended', function(){ musNext(true); });
   a.addEventListener('error', function(){ if(a.getAttribute('src')){ toast('Este archivo no se puede reproducir; paso a la siguiente'); setTimeout(function(){ musNext(true); }, 600); } });
   musLoadState(); musPaintTitle(); musPaintPlay();
+  a.volume=S.musVol;
 })();
 
 /* ================= INICIO ================= */
 load();
 refreshDaily();
 updateHUD();
+paintSnd();
 if(S.board || isDaily()) showBoard(); else { buildScene('puente'); openNew(true); }
 </script>
 </body>
